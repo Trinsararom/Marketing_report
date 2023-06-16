@@ -1,28 +1,29 @@
-import pandas as pd
-import streamlit as st
-import numpy as np
-from datetime import datetime
+# import library
+import pandas as pd #data manipulate
+import streamlit as st #web abb (Dashboard (DB))
+import numpy as np # function (math,arrays)
+from datetime import datetime # handle with time
 import datetime
-import altair as alt
-from openpyxl import load_workbook
-import matplotlib.pyplot as plt
-import seaborn as sns
-import plotly.express as px
-import plotly.graph_objs as go
-import plotly.colors as pc
-import re
-import warnings
-import calendar
-warnings.filterwarnings('ignore')
-import pycountry
+import altair as alt # visualized (DB)
+from openpyxl import load_workbook # excel
+import matplotlib.pyplot as plt # visualized
+import seaborn as sns # visualized
+import plotly.express as px # ***visualized
+import plotly.graph_objs as go # visualized
+import re # set of strings that matches
+import seaborn as sns # visualized
+import warnings  
+warnings.filterwarnings('ignore') # ignore warning
+import pycountry #To identify country
 
-
+#layout
 st.set_page_config(
     page_title="HWS",
     layout = 'wide',
 )
 st.title('Hotel Website')
 
+# Upload
 st.subheader('Please Upload Excel Files')
 uploaded_files = st.file_uploader("Choose a Excel file",type = 'xlsx', accept_multiple_files=True)
 if uploaded_files:
@@ -30,7 +31,7 @@ if uploaded_files:
     for uploaded_file in uploaded_files:
         try:
             for uploaded_file in uploaded_files:
-                df = pd.read_excel(uploaded_file, thousands=',', skiprows=[0,1,2,3,4,5,6])
+                df = pd.read_excel(uploaded_file, thousands=',', skiprows=[0,1,2,3,4,5,6]) # skip rows
                 all.append(df)
         except Exception as e:
             st.write(f"Error reading file: {uploaded_file.name}")
@@ -40,15 +41,15 @@ if uploaded_files:
 
             def clean(all):
                 all = all.drop(['No.','Stay Month','Day of week','Child Code','Campaign'
-                                ,'By Partner','Note','utm_id','utm_term','Guest Name','Email','Room Revenue'], axis=1)
-                all[['Gender','Phone']] = all[['Gender','Phone']].fillna('Unknown')
-                all[['Payment Gateway','Payment Scheme']] = all[['Payment Gateway','Payment Scheme']].fillna('None')
-                all['Access Code'] = all['Access Code'].fillna('Not used')
-                all[['Booking Number','Phone']] = all[['Booking Number','Phone']].astype('str')
-                all = all.rename(columns={'Campaign.1': 'Campaign','# of night':'LOS','# of room':'Quantity','# of room night':'RN'})
+                                ,'By Partner','Note','utm_id','utm_term','Guest Name','Email','Room Revenue'], axis=1) # drop rows
+                all[['Gender','Phone']] = all[['Gender','Phone']].fillna('Unknown') # fill nan
+                all[['Payment Gateway','Payment Scheme']] = all[['Payment Gateway','Payment Scheme']].fillna('None') # fill nan
+                all['Access Code'] = all['Access Code'].fillna('Not used') # fill nan
+                all[['Booking Number','Phone']] = all[['Booking Number','Phone']].astype('str')# astype
+                all = all.rename(columns={'Campaign.1': 'Campaign','# of night':'LOS','# of room':'Quantity','# of room night':'RN'}) # rename col
                 #all = all.fillna('None')
                 return all
-
+            # get country
             def convert_to_iso3(country_name):
                 try:
                     return pycountry.countries.get(name=country_name).alpha_3
@@ -58,9 +59,10 @@ if uploaded_files:
             all = clean(all)
             def perform(all): 
                 all1 = all.copy()
-                all1["Check-in"] = pd.to_datetime(all1["Check-in"], format='%d-%m-%Y')
+                all1["Check-in"] = pd.to_datetime(all1["Check-in"], format='%d-%m-%Y') # astype by format
                 all1['Booking Date'] = pd.to_datetime(all1['Booking Date'], format='%d-%m-%Y')
                 all1["Check-out"] = pd.to_datetime(all1["Check-out"], format='%d-%m-%Y')
+                # grouping data
                 value_ranges = [-1, 0, 1, 2, 3, 4, 5, 6, 7,8, 14, 30, 90, 120]
                 labels = ['-one', 'zero', 'one', 'two', 'three', 'four', 'five', 'six','seven', '8-14', '14-30', '31-90', '90-120', '120+']
                 LT11 = [-1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30,31,90, 120, float('inf')]
@@ -72,17 +74,17 @@ if uploaded_files:
                 all1['iso_alpha'] =  all1['Booking Location'].apply(convert_to_iso3)
                 all1['iso_alpha1'] =  all1['Nationality'].apply(convert_to_iso3)
                 return all1
-
+            # perform
             all2 =  perform(all)
-
+            # find unigue
             channels = all2['Booking Source'].unique()
             room_type_options = all2['Room type'].unique().tolist()
             bs_options = all2['Booking Status'].unique().tolist()
-
+            # multi select
             selected_channels = st.sidebar.multiselect('Select channels. ', channels, default=[], key='channels_select')
             selected_room_types = st.sidebar.multiselect('Select room types.', room_type_options, default=[], key='room_types_select')
-            selected_room_bs = st.sidebar.multiselect('Select Booking status', bs_options, default=[], key='bs_select')
-
+            selected_room_bs = st.sidebar.multiselect('Select Booking status', bs_options, default=[], key='bs_select') # *** booking status 
+            # tab
             tab1, tab_stay = st.tabs(['Book on date','Stay on date'])
             with tab1:
                 if selected_channels:
@@ -103,8 +105,9 @@ if uploaded_files:
                 month_dict = {v: k for k,v in enumerate(calendar.month_name)}
                 months = list(calendar.month_name)[1:]
                 selected_month = st.multiselect('Select a month', months)
+                # select year
                 selected_year = st.selectbox('Select a year ', ['2022', '2023', '2024','2025','2026'], index=1)
-
+                # filter datetime
                 if selected_month and selected_year:
                                 selected_month_nums = [month_dict[month_name] for month_name in selected_month]
                                 filtered_df = filtered_df[
@@ -117,7 +120,7 @@ if uploaded_files:
                 elif selected_year:
                                 filtered_df = filtered_df[filtered_df['Booking Date'].dt.year == int(selected_year)]
 
-                
+                # filtered by variable
                 col1 , col2 ,col3 = st.columns(3)
                 with col2:
                     filter_LT = st.checkbox('Filter by LT ')
@@ -145,6 +148,7 @@ if uploaded_files:
                         filtered_df = filtered_df.copy()
 
                 table = filtered_df.copy()
+                # To find stay
                 table['Stay'] = table.apply(lambda row: pd.date_range(row['Check-in'], row['Check-out']- pd.Timedelta(days=1)), axis=1)
                 table = table.explode('Stay').reset_index(drop=True)
                 bb,ss = st.tabs(['**ADR by Room type and channel (Booked)**','**ADR by Room type and channel (Stay)**'])
@@ -322,7 +326,7 @@ if uploaded_files:
                             fig = px.bar(grouped, x='Lead Time', y='counts', color='Room type',color_discrete_map=color_scale, barmode='stack')
                             st.plotly_chart(fig,use_container_width=True) 
 
-
+                #overview
                 tab1, tab2, tab3 ,tab4, tab5 , tab6 ,tab7,t0,tab8 = st.tabs(["Average", "Median", "Statistic",'Data'
                                                                 ,'Bar Chart','Room roomnight by channel'
                                                                 ,'Room revenue by channel','Room type by channel','etc.'])
@@ -395,6 +399,7 @@ if uploaded_files:
                     fig = px.treemap(counts, path=['Booking Source', 'Room type'], values='Count', color='Count',color_continuous_scale='YlOrRd')
                     st.plotly_chart(fig,use_container_width=True)
                 with tab8:
+                    # stat etc.
                     t1,t2,t3,t4,t5,t6,t7,t8 = st.tabs(['Gender','Nationality','Booking Location'
                                                     ,'View Language','View Currency','Booking Status'
                                                     ,'Payment Gateway','Payment Scheme'])
@@ -507,7 +512,7 @@ if uploaded_files:
                         st.write(pt.style.background_gradient(cmap='coolwarm', axis=1))
                     else:
                         st.write('Not enough data to create a pivot table')
-
+                # LM VS TM
                 t0,tb,tLT,tLOS = st.tabs(['**LMvsTM**','**Pivot by Booked**','**Pivot by LT**','**Pivot by LOS**'])
                 with t0:
                     st.markdown('**LMvsTM**')
@@ -554,6 +559,7 @@ if uploaded_files:
                                 bar_chart.update_traces(texttemplate='%{text}', textposition='auto')
                                 col2.plotly_chart(bar_chart, use_container_width=True)
                     with t_reatecode:
+                            # rate code
                             t11,t22,t33 = st.tabs(['sum ratecode','count ratecode','Pie chart'])
                             with t11:
                                 col1,col2 = st.columns(2)
@@ -603,6 +609,7 @@ if uploaded_files:
                                 fig.update_traces(textposition='outside', textinfo='percent+label')
                                 st.plotly_chart(fig,use_container_width=True)
                     with t_acce:
+                        # access code
                             t11,t22,t33 = st.tabs(['sum Access code','count Access code','Pie chart'])
                             with t11:
                                 col1,col2 = st.columns(2)
@@ -652,6 +659,7 @@ if uploaded_files:
                                 fig.update_traces(textposition='outside', textinfo='percent+label')
                                 st.plotly_chart(fig,use_container_width=True)
                     with t_utm_content:
+                        # utm content
                             cont,source,medium,campag = st.tabs(['utm content','utm source','utm medium','utm campaign'])
                             with cont:
                                 t11,t22,t33 = st.tabs(['sum utm_content','count utm_content','Pie chart'])
@@ -849,7 +857,7 @@ if uploaded_files:
                                         hole=0.4)
                                     fig.update_traces(textposition='inside', textinfo='percent+label')
                                     st.plotly_chart(fig,use_container_width=True)
-
+                # pivot by variable
                 with tb:
                     st.markdown('**Pivot table by Booked**')
                     t1,t2,t3,t4 = st.tabs(['ADR','LT','LOS','RN'])
@@ -1063,7 +1071,7 @@ if uploaded_files:
                             fig = px.bar(grouped, x='LOS', y='counts', color='Booking Source',color_discrete_map=color_scale, barmode='stack')
                             st.plotly_chart(fig)
 
-
+            # tab stay
             with tab_stay:
                 all3 =  perform(all2)
                 if selected_channels:
